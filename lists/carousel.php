@@ -21,6 +21,7 @@ return [
         'note' => 'Slides a theme can show in a carousel, in display order. A group name lets a site run more than one carousel. Scheduled slides appear and disappear by themselves.',
         'emptyText' => 'No slides yet - use Add Slide to create one.',
         'order' => null, // Server order: display order, then oldest first
+        'grid' => require __DIR__ . '/../grids/carousel.php',
         'columns' => [
             ['key' => 'thumbHtml', 'label' => '', 'type' => 'raw', 'sortable' => false, 'nowrap' => true],
             ['key' => 'title', 'label' => 'Title', 'type' => 'text', 'strong' => true, 'fill' => true],
