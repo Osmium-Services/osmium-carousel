@@ -5,7 +5,7 @@ declare(strict_types=1);
 use Osmium\Modules\Admin\Core\ListView;
 
 /**
- * Carousel lists, rendered by Osmium\Modules\Admin\Core\ListView. Row fields (thumbHtml, statusBadge...) are
+ * Carousel lists, rendered by Osmium\Modules\Admin\Core\ListView. Row fields (thumbUrl, statusBadge...) are
  * prepared by CarouselController::formatSlide() and formatRecentSlide()/formatDeletedSlide().
  */
 require_once 'app/core/admin/services/ChangedByCell.php';
@@ -23,11 +23,11 @@ return [
         'order' => null, // Server order: display order, then oldest first
         'grid' => require __DIR__ . '/../grids/carousel.php',
         'columns' => [
-            ['key' => 'thumbHtml', 'label' => '', 'type' => 'raw', 'sortable' => false, 'nowrap' => true],
+            ['key' => 'thumbUrl', 'label' => '', 'type' => 'image', 'altKey' => 'title', 'sortable' => false, 'hideBelow' => 'md'],
             ['key' => 'title', 'label' => 'Title', 'type' => 'text', 'strong' => true, 'fill' => true],
-            ['key' => 'groupName', 'label' => 'Group', 'type' => 'text', 'nowrap' => true],
+            ['key' => 'groupName', 'label' => 'Group', 'type' => 'text', 'nowrap' => true, 'hideBelow' => 'md'],
             ['key' => 'statusBadge', 'label' => 'Status', 'type' => 'raw', 'nowrap' => true],
-            ['key' => 'sortOrder', 'label' => 'Order', 'type' => 'text', 'nowrap' => true],
+            ['key' => 'sortOrder', 'label' => 'Order', 'type' => 'text', 'nowrap' => true, 'hideBelow' => 'md'],
         ],
         'actions' => [
             ['label' => 'Edit', 'icon' => 'bx-edit-alt', 'event' => 'edit'],

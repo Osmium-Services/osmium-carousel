@@ -371,7 +371,7 @@ class CarouselController extends AdminController
             'recurring' => (bool) $row['schedule_recurring'],
             'exclusive' => (bool) $row['exclusive'],
             'notes' => $row['promotion_notes'] ?? '',
-            'thumbHtml' => $this->thumbHtml($row['image_filename'] ?? null),
+            'thumbUrl' => $this->thumbUrl($row['image_filename'] ?? null),
             'statusBadge' => $this->statusBadge($label) . ($row['exclusive'] ? ' <span class="badge bg-label-warning">Exclusive</span>' : ''),
         ];
     }
@@ -412,14 +412,12 @@ class CarouselController extends AdminController
         return '<span class="badge bg-label-' . $colour . '">' . \htmlspecialchars($label) . '</span>';
     }
 
-    private function thumbHtml(?string $name): string
+    private function thumbUrl(?string $name): string
     {
         $hasName = !empty($name);
         if (!$hasName) return '';
 
-        $src = \htmlspecialchars(SlideImage::DIR . \basename($name) . '-mobile.jpg');
-
-        return '<img src="' . $src . '" alt="" height="40" style="max-width: 120px; object-fit: cover;">';
+        return SlideImage::DIR . \basename($name) . '-mobile.jpg';
     }
 
     private function logChange(string $action, int $id, string $name): void
