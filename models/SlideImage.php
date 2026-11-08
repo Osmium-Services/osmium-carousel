@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace Osmium\Services\OsmiumCarousel\Models;
 
+use Osmium\Core\Library\ImageTools;
+
 /**
  * A slide's picture on disk: the desktop size, a half-size mobile copy, each as JPG plus WebP and AVIF where this
  * server's GD can write them. Files are named <name>.jpg, <name>-mobile.jpg, webp/<name>.webp and avif/<name>.avif.
@@ -19,19 +21,10 @@ class SlideImage
      * @return array{width: int, height: int} Size of the desktop copy
      * @throws \InvalidArgumentException when the file is not a usable image or is smaller than the target size
      */
-    public static function save(string $sourcePath, string $mimeType, string $name, int $width, int $height, string $root): array
+    public static function save(string $sourcePath, string $name, int $width, int $height, string $root): array
     {
-        $decoder = match ($mimeType) {
-            'image/jpeg' => 'imagecreatefromjpeg',
-            'image/png' => 'imagecreatefrompng',
-            'image/webp' => 'imagecreatefromwebp',
-            default => null,
-        };
-        $unsupported = $decoder === null || !\function_exists($decoder);
-        if ($unsupported) throw new \InvalidArgumentException('Image must be a JPG, PNG or WebP file');
-
-        $source = $decoder($sourcePath);
-        if (!$source) throw new \InvalidArgumentException('Failed to process the image');
+        $tools = new ImageTools();
+        $source = $tools->load(path: $sourcePath, allowedTypes: self::TYPES);
 
         $sourceWidth = \imagesx($source);
         $sourceHeight = \imagesy($source);
@@ -40,10 +33,8 @@ class SlideImage
             throw new \InvalidArgumentException("Image is too small. It must be at least {$width} x {$height}px; this one is {$sourceWidth} x {$sourceHeight}px");
         }
 
-        $desktop = self::cropAndScale(source: $source, sourceWidth: $sourceWidth, sourceHeight: $sourceHeight, width: $width, height: $height);
-        $mobileWidth = \intdiv($width, 2);
-        $mobileHeight = \intdiv($height, 2);
-        $mobile = self::cropAndScale(source: $desktop, sourceWidth: $width, sourceHeight: $height, width: $mobileWidth, height: $mobileHeight);
+        $desktop = $tools->cover(image: $source, width: $width, height: $height, keepAlpha: false);
+        $mobile = $tools->cover(image: $desktop, width: \intdiv($width, 2), height: \intdiv($height, 2), keepAlpha: false);
 
         $dir = $root . self::DIR;
         self::makeDirs($dir);
@@ -83,32 +74,6 @@ class SlideImage
         $avif = \file_exists($dir . 'avif/' . $base . '.avif') ? self::DIR . 'avif/' . $base . '.avif' : null;
 
         return ['jpg' => self::DIR . $base . '.jpg', 'webp' => $webp, 'avif' => $avif];
-    }
-
-    private static function cropAndScale(\GdImage $source, int $sourceWidth, int $sourceHeight, int $width, int $height): \GdImage
-    {
-        $targetRatio = $width / $height;
-        $sourceWider = ($sourceWidth / $sourceHeight) > $targetRatio;
-        $cropWidth = $sourceWider ? (int) ($sourceHeight * $targetRatio) : $sourceWidth;
-        $cropHeight = $sourceWider ? $sourceHeight : (int) ($sourceWidth / $targetRatio);
-        $cropX = \intdiv($sourceWidth - $cropWidth, 2);
-        $cropY = \intdiv($sourceHeight - $cropHeight, 2);
-
-        $scaled = \imagecreatetruecolor(width: $width, height: $height);
-        \imagecopyresampled(
-            dst_image: $scaled,
-            src_image: $source,
-            dst_x: 0,
-            dst_y: 0,
-            src_x: $cropX,
-            src_y: $cropY,
-            dst_width: $width,
-            dst_height: $height,
-            src_width: $cropWidth,
-            src_height: $cropHeight,
-        );
-
-        return $scaled;
     }
 
     private static function makeDirs(string $dir): void

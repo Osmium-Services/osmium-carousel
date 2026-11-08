@@ -301,7 +301,7 @@ class CarouselController extends AdminController
     /**
      * The uploaded picture checked and ready to save, or null when none was sent
      *
-     * @return array{tmp_name: string, mimeType: string}|null
+     * @return array{tmp_name: string}|null
      */
     private function validateUpload(): ?array
     {
@@ -320,11 +320,11 @@ class CarouselController extends AdminController
         $tooLarge = $file['size'] > $maxUpload['bytes'];
         if ($tooLarge) throw new \InvalidArgumentException('The picture is too large. Maximum ' . $maxUpload['formatted']);
 
-        return ['tmp_name' => $file['tmp_name'], 'mimeType' => $mimeType];
+        return ['tmp_name' => $file['tmp_name']];
     }
 
     /**
-     * @param array{tmp_name: string, mimeType: string} $upload
+     * @param array{tmp_name: string} $upload
      * @return array{name: string, width: int, height: int}
      */
     private function savePicture(array $upload): array
@@ -334,7 +334,6 @@ class CarouselController extends AdminController
 
         $saved = SlideImage::save(
             sourcePath: $upload['tmp_name'],
-            mimeType: $upload['mimeType'],
             name: $name,
             width: $size['width'],
             height: $size['height'],
