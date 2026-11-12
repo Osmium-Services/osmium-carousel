@@ -1,7 +1,7 @@
 {
     "id": "osmium-carousel",
     "name": "Osmium Carousel",
-    "version": "0.2.5",
+    "version": "0.3.0",
     "description": "Homepage slides (image, title, text, link) managed in admin with schedules, for a theme to show with any carousel or none",
     "category": "content",
     "author": {
@@ -27,12 +27,14 @@
             "items": [
                 {
                     "id": "osmium-carousel",
-                    "label": "Osmium Carousel",
+                    "label": "Carousel",
                     "icon": "bx bx-images",
                     "route": "admin/carousel",
                     "activePattern": "admin/carousel*",
                     "color": "#17a2b8",
-                    "placement": "top",
+                    "placement": "group",
+                    "group": "content",
+                    "order": 20,
                     "role": null
                 }
             ]
