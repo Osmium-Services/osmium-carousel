@@ -28,6 +28,8 @@ class Carousel
      */
     public function active(?string $group = null, ?string $today = null): array
     {
+        CarouselAdminBar::noteShown(); // The staff bar offers "Edit carousel" on a page that asked for slides
+
         $today ??= \date('Y-m-d');
         $root = $this->root ?? (string) $_SERVER['DOCUMENT_ROOT'];
 
