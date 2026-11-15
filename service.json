@@ -1,7 +1,7 @@
 {
     "id": "osmium-carousel",
     "name": "Osmium Carousel",
-    "version": "0.5.0",
+    "version": "0.6.0",
     "description": "Homepage slides (image, title, text, link) managed in admin with schedules, for a theme to show with any carousel or none",
     "category": "content",
     "author": {
@@ -54,6 +54,18 @@
                 "class": "Osmium\\Services\\OsmiumCarousel\\Controllers\\CarouselController",
                 "method": "index",
                 "title": "Osmium Carousel"
+            },
+            "admin/carousel/add": {
+                "controller": "controllers/CarouselController.php",
+                "class": "Osmium\\Services\\OsmiumCarousel\\Controllers\\CarouselController",
+                "method": "add",
+                "title": "New Slide"
+            },
+            "admin/carousel/edit": {
+                "controller": "controllers/CarouselController.php",
+                "class": "Osmium\\Services\\OsmiumCarousel\\Controllers\\CarouselController",
+                "method": "edit",
+                "title": "Edit Slide"
             },
             "admin/carousel/action": {
                 "controller": "controllers/CarouselController.php",

@@ -1,0 +1,19 @@
+<?php $slide = $admin['slide']; ?>
+<div class="d-flex justify-content-between align-items-center py-3 mb-4">
+    <h4 class="mb-0">
+        <img src="/assets/services/osmium-carousel/logo.png" alt="" width="28" height="28" class="me-2 align-text-bottom"><span class="text-muted fw-light"><a href="<?= $adminUrl('carousel/') ?>">Osmium Carousel</a> /</span> New Slide
+    </h4>
+    <a href="<?= $adminUrl('carousel/') ?>" class="btn btn-label-secondary">
+        <i class="bx bx-arrow-back me-1"></i> All slides
+    </a>
+</div>
+
+<?php if ($admin['showSavedMessage']): ?>
+    <div class="alert alert-success alert-dismissible fade show" role="alert">
+        <i class="bx bx-check-circle me-1"></i>
+        Slide saved successfully.
+        <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+    </div>
+<?php endif; ?>
+
+<?php include __DIR__ . '/form.phtml'; ?>

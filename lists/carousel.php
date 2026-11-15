@@ -30,7 +30,7 @@ return [
             ['key' => 'sortOrder', 'label' => 'Order', 'type' => 'text', 'nowrap' => true, 'hideBelow' => 'md'],
         ],
         'actions' => [
-            ['label' => 'Edit', 'icon' => 'bx-edit-alt', 'event' => 'edit'],
+            ['label' => 'Edit', 'icon' => 'bx-edit-alt', 'url' => '{edit_url}'],
             [
                 'label' => 'Turn on',
                 'icon' => 'bx-show',

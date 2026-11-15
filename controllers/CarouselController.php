@@ -37,11 +37,30 @@ class CarouselController extends AdminController
         $this->data['admin']['slides'] = \array_map(fn(array $row): array => $this->formatSlide(row: $row, today: $today), $model->listAll());
         $this->data['admin']['recentSlides'] = \array_map($this->formatRecentSlide(...), $model->listRecent());
         $this->data['admin']['deletedSlides'] = \array_map($this->formatDeletedSlide(...), $model->listDeleted());
-        $this->data['admin']['pages'] = $model->listPages();
         $this->data['admin']['size'] = CarouselConfig::get();
         $this->data['admin']['sizeLimits'] = ['min' => CarouselConfig::MIN_SIDE, 'max' => CarouselConfig::MAX_SIDE];
 
         $this->setView('carousel/index.phtml');
+    }
+
+    public function add(): void
+    {
+        $this->osmium->clearStashedQuerystring();
+        $this->prepareFormData(model: new Slide($this->osmium->dataSource), slide: null);
+        $this->setView('carousel/add.phtml');
+    }
+
+    public function edit(): void
+    {
+        $model = new Slide($this->osmium->dataSource);
+
+        $id = (int) $this->osmium->getStashedParam(key: 'id', default: 0); // Core moves query params out of $_GET
+        $this->osmium->clearStashedQuerystring();
+        $row = $id ? $model->getById($id) : null;
+        if (!$row) $this->redirect('carousel/');
+
+        $this->prepareFormData(model: $model, slide: $this->formatSlide(row: $row, today: \date('Y-m-d')));
+        $this->setView('carousel/edit.phtml');
     }
 
     public function action()
@@ -86,6 +105,28 @@ class CarouselController extends AdminController
     // Private Helpers
     // =========================================================================
 
+    /** @param array<string, mixed>|null $slide a formatted slide, or null for a new one */
+    private function prepareFormData(Slide $model, ?array $slide): void
+    {
+        $this->data['admin']['slide'] = $slide ?? [
+            'id' => 0, 'title' => '', 'groupName' => '', 'summary' => '', 'buttonText' => '', 'linkType' => 'none',
+            'linkPageId' => '', 'linkUrl' => '', 'enabled' => true, 'sortOrder' => 0, 'scheduleStart' => '',
+            'scheduleEnd' => '', 'recurring' => false, 'exclusive' => false, 'notes' => '', 'thumbUrl' => '',
+        ];
+        $this->data['admin']['groups'] = \array_values(\array_unique(\array_filter(\array_column($model->listAll(), 'group_name'))));
+        $this->data['admin']['pages'] = $model->listPages();
+        $this->data['admin']['size'] = CarouselConfig::get();
+        $this->data['admin']['showSavedMessage'] = $this->consumeSavedFlag();
+    }
+
+    private function consumeSavedFlag(): bool
+    {
+        $wasSaved = isset($_SESSION['carousel_saved']);
+        unset($_SESSION['carousel_saved']);
+
+        return $wasSaved;
+    }
+
     private function createSlide(array $input): array
     {
         $details = $this->validateDetails($input);
@@ -99,6 +140,7 @@ class CarouselController extends AdminController
         $model->setImage(id: $newId, imageFilename: $saved['name'], width: $saved['width'], height: $saved['height']);
 
         $this->logChange(action: 'Created', id: $newId, name: $details['title']);
+        $_SESSION['carousel_saved'] = true;
 
         return ['success' => true, 'id' => $newId];
     }
@@ -126,6 +168,7 @@ class CarouselController extends AdminController
         if ($keepsPicture) $this->followTitle(slide: $existing, title: $details['title'], model: $model);
 
         $this->logChange(action: 'Updated', id: $id, name: $details['title']);
+        $_SESSION['carousel_saved'] = true;
 
         return ['success' => true, 'id' => $id];
     }
@@ -404,6 +447,7 @@ class CarouselController extends AdminController
             'exclusive' => (bool) $row['exclusive'],
             'notes' => $row['promotion_notes'] ?? '',
             'thumbUrl' => SlideImage::thumbUrl($row['image_filename'] ?? null),
+            'edit_url' => $this->getBasePath() . 'carousel/edit/?id=' . (int) $row['id'],
             'thumb_list' => $this->listThumb($row['image_filename'] ?? null, 'list'),
             'thumb_grid' => $this->listThumb($row['image_filename'] ?? null, 'grid'),
             'statusBadge' => $this->statusBadge($label) . ($row['exclusive'] ? ' <span class="badge bg-label-warning">Exclusive</span>' : ''),

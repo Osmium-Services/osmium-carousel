@@ -1,0 +1,148 @@
+<?php
+/** The slide form, shared by add.phtml and edit.phtml. Expects $slide, $admin, $adminUrl and $adminAssetVersion from the view. */
+?>
+<div id="slideResult" class="alert d-none"></div>
+
+<form id="slideForm" autocomplete="off">
+    <input type="hidden" id="slideId" value="<?= (int) $slide['id'] ?>">
+
+    <div class="row">
+        <div class="col-lg-8">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="slideTitle">Title</label>
+                        <input type="text" class="form-control" id="slideTitle" maxlength="150" required value="<?= \htmlspecialchars($slide['title']) ?>">
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="slideSummary">Text (optional)</label>
+                        <textarea class="form-control" id="slideSummary" rows="2" maxlength="255"><?= \htmlspecialchars($slide['summary']) ?></textarea>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label" for="slideImage">Picture <?php if ($slide['id']): ?><span class="text-muted">(leave as is to keep the current one)</span><?php endif; ?></label>
+                        <div class="slide-picture-zone" id="slidePictureZone">
+                            <button type="button" class="btn btn-sm btn-icon btn-danger slide-picture-remove d-none" title="Remove picture">
+                                <i class="bx bx-trash"></i>
+                            </button>
+                            <div class="slide-picture-empty">
+                                <i class="bx bx-cloud-upload"></i>
+                                <p class="mb-1 mt-2 fw-medium">Drag &amp; drop or click to upload</p>
+                                <small class="text-muted">JPG, PNG or WebP</small>
+                            </div>
+                            <img src="" alt="" class="slide-picture-preview d-none">
+                        </div>
+                        <input type="file" class="d-none" id="slideImage" accept="image/jpeg,image/png,image/webp">
+                        <div class="form-text">At least <?= (int) $admin['size']['width'] ?> x <?= (int) $admin['size']['height'] ?>px. JPG, PNG or WebP.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header"><h6 class="mb-0">Link</h6></div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <label class="form-label" for="slideLinkType">Link to</label>
+                            <select class="form-select" id="slideLinkType">
+                                <?php foreach (['none' => 'Nothing', 'page' => 'A page on this site', 'url' => 'An address'] as $value => $label): ?>
+                                    <option value="<?= $value ?>" <?= $slide['linkType'] === $value ? 'selected' : '' ?>><?= $label ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-8 mb-3 d-none" id="slideLinkPageWrap">
+                            <label class="form-label" for="slideLinkPage">Page</label>
+                            <select class="form-select" id="slideLinkPage">
+                                <?php foreach ($admin['pages'] as $page): ?>
+                                    <option value="<?= (int) $page['id'] ?>" <?= (string) $slide['linkPageId'] === (string) $page['id'] ? 'selected' : '' ?>><?= \htmlspecialchars(($page['title'] ?: $page['url']) . ' (/' . \trim((string) $page['url'], '/') . ')') ?></option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                        <div class="col-md-8 mb-3 d-none" id="slideLinkUrlWrap">
+                            <label class="form-label" for="slideLinkUrl">Address</label>
+                            <input type="text" class="form-control" id="slideLinkUrl" maxlength="255" placeholder="https:// or /path" value="<?= \htmlspecialchars($slide['linkUrl']) ?>">
+                        </div>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label" for="slideButtonText">Button text (optional)</label>
+                        <input type="text" class="form-control" id="slideButtonText" maxlength="50" value="<?= \htmlspecialchars($slide['buttonText']) ?>">
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-4">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="slideEnabled" <?= $slide['enabled'] ? 'checked' : '' ?>>
+                        <label class="form-check-label" for="slideEnabled">Turned on</label>
+                    </div>
+                    <div class="form-check form-switch mb-3">
+                        <input class="form-check-input" type="checkbox" id="slideExclusive" <?= $slide['exclusive'] ? 'checked' : '' ?>>
+                        <label class="form-check-label" for="slideExclusive">Exclusive: when live, only exclusive slides show</label>
+                    </div>
+                    <button type="submit" class="btn btn-primary w-100" id="slideSaveButton">Save</button>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header"><h6 class="mb-0">Where it shows</h6></div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="slideGroup">Group (optional)</label>
+                        <input type="text" class="form-control" id="slideGroup" maxlength="100" list="slideGroupOptions" value="<?= \htmlspecialchars($slide['groupName']) ?>">
+                        <datalist id="slideGroupOptions">
+                            <?php foreach ($admin['groups'] as $groupName): ?>
+                                <option value="<?= \htmlspecialchars($groupName) ?>">
+                            <?php endforeach; ?>
+                        </datalist>
+                        <div class="form-text">Slides with the same group form one carousel. Leave empty for the site's main carousel.</div>
+                    </div>
+                    <div class="mb-0">
+                        <label class="form-label" for="slideSortOrder">Order</label>
+                        <input type="number" class="form-control" id="slideSortOrder" min="0" value="<?= (int) $slide['sortOrder'] ?>">
+                        <div class="form-text">Lower shows first.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header"><h6 class="mb-0">Schedule</h6></div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <label class="form-label" for="slideScheduleStart">Show from (optional)</label>
+                        <input type="date" class="form-control" id="slideScheduleStart" value="<?= \htmlspecialchars($slide['scheduleStart']) ?>">
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label" for="slideScheduleEnd">Show until (optional)</label>
+                        <input type="date" class="form-control" id="slideScheduleEnd" value="<?= \htmlspecialchars($slide['scheduleEnd']) ?>">
+                    </div>
+                    <div class="form-check form-switch mb-0">
+                        <input class="form-check-input" type="checkbox" id="slideRecurring" <?= $slide['recurring'] ? 'checked' : '' ?>>
+                        <label class="form-check-label" for="slideRecurring">Repeat every year</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-header"><h6 class="mb-0">Notes</h6></div>
+                <div class="card-body">
+                    <textarea class="form-control" id="slideNotes" rows="3"><?= \htmlspecialchars($slide['notes']) ?></textarea>
+                    <div class="form-text">Never shown on the site.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script nonce="<?= $cspNonce ?? '' ?>">
+    window.OsmiumCarouselConfig = {
+        basePath: adminBasePath,
+        editUrl: <?= \json_encode($adminUrl('carousel/edit/')) ?>,
+        currentPicture: <?= \json_encode($slide['thumbUrl']) ?>
+    };
+</script>
+<link rel="stylesheet" href="/assets/services/osmium-carousel/carousel.css<?= $adminAssetVersion('/assets/services/osmium-carousel/carousel.css') ?>">
+<script src="/assets/services/osmium-carousel/carousel-edit.js<?= $adminAssetVersion('/assets/services/osmium-carousel/carousel-edit.js') ?>"></script>
