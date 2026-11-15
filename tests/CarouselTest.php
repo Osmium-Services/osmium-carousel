@@ -78,6 +78,7 @@ class CarouselTest extends DatabaseTestCase
         $this->assertFileExists($dir . 'old-title/other.jpg');
         $this->assertSame('old-title/other', SlideImage::move(name: 'old-title/other', title: 'Old Title', root: $root));
 
+        \touch($dir . 'new-title/.DS_Store');
         SlideImage::remove(name: 'new-title/beach-hero', root: $root);
         $this->assertDirectoryDoesNotExist($dir . 'new-title');
         $this->assertSame('3fa85f6457174562', SlideImage::move(name: '3fa85f6457174562', title: 'Anything', root: $root));

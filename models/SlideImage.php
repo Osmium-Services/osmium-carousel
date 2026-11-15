@@ -180,7 +180,10 @@ class SlideImage
     {
         $hasFolder = $dir !== $root . self::DIR;
         if ($hasFolder) {
-            foreach (['webp/', 'avif/', ''] as $sub) @\rmdir($dir . $sub); // Only succeeds on an empty folder
+            foreach (['webp/', 'avif/', ''] as $sub) {
+                @\unlink($dir . $sub . '.DS_Store'); // Finder leaves this behind, and it would stop the folder counting as empty
+                @\rmdir($dir . $sub); // Only succeeds on an empty folder
+            }
         }
     }
 
