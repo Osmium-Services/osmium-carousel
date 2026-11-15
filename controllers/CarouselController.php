@@ -94,7 +94,7 @@ class CarouselController extends AdminController
         if ($noPicture) throw new \InvalidArgumentException('A slide needs a picture');
 
         $model = new Slide($this->osmium->dataSource);
-        $saved = $this->savePicture($upload);
+        $saved = $this->savePicture(upload: $upload, title: $details['title']);
         $newId = $model->create($details);
         $model->setImage(id: $newId, imageFilename: $saved['name'], width: $saved['width'], height: $saved['height']);
 
@@ -113,7 +113,7 @@ class CarouselController extends AdminController
         if (!$existing) throw new \InvalidArgumentException('Slide not found');
 
         $hasNewPicture = $upload !== null;
-        $saved = $hasNewPicture ? $this->savePicture($upload) : null;
+        $saved = $hasNewPicture ? $this->savePicture(upload: $upload, title: $details['title']) : null;
 
         $model->update(id: $id, details: $details);
 
@@ -301,7 +301,7 @@ class CarouselController extends AdminController
     /**
      * The uploaded picture checked and ready to save, or null when none was sent
      *
-     * @return array{tmp_name: string}|null
+     * @return array{tmp_name: string, name: string}|null
      */
     private function validateUpload(): ?array
     {
@@ -320,17 +320,17 @@ class CarouselController extends AdminController
         $tooLarge = $file['size'] > $maxUpload['bytes'];
         if ($tooLarge) throw new \InvalidArgumentException('The picture is too large. Maximum ' . $maxUpload['formatted']);
 
-        return ['tmp_name' => $file['tmp_name']];
+        return ['tmp_name' => $file['tmp_name'], 'name' => (string) ($file['name'] ?? '')];
     }
 
     /**
-     * @param array{tmp_name: string} $upload
+     * @param array{tmp_name: string, name: string} $upload
      * @return array{name: string, width: int, height: int}
      */
-    private function savePicture(array $upload): array
+    private function savePicture(array $upload, string $title): array
     {
         $size = CarouselConfig::get();
-        $name = \bin2hex(\random_bytes(8));
+        $name = SlideImage::name(title: $title, originalName: $upload['name'], root: $this->root());
 
         $saved = SlideImage::save(
             sourcePath: $upload['tmp_name'],
@@ -370,7 +370,9 @@ class CarouselController extends AdminController
             'recurring' => (bool) $row['schedule_recurring'],
             'exclusive' => (bool) $row['exclusive'],
             'notes' => $row['promotion_notes'] ?? '',
-            'thumbUrl' => $this->thumbUrl($row['image_filename'] ?? null),
+            'thumbUrl' => SlideImage::thumbUrl($row['image_filename'] ?? null),
+            'thumb_list' => $this->listThumb($row['image_filename'] ?? null, 'list'),
+            'thumb_grid' => $this->listThumb($row['image_filename'] ?? null, 'grid'),
             'statusBadge' => $this->statusBadge($label) . ($row['exclusive'] ? ' <span class="badge bg-label-warning">Exclusive</span>' : ''),
         ];
     }
@@ -411,12 +413,20 @@ class CarouselController extends AdminController
         return '<span class="badge bg-label-' . $colour . '">' . \htmlspecialchars($label) . '</span>';
     }
 
-    private function thumbUrl(?string $name): string
+    /**
+     * The thumbnail the lists show: core's Image picks the best of AVIF, WebP and JPG. A picture saved before these
+     * copies existed has none, so it falls back to its mobile copy.
+     */
+    private function listThumb(?string $name, string $kind): string
     {
-        $hasName = !empty($name);
-        if (!$hasName) return '';
+        $unusable = !SlideImage::isValidName($name);
+        if ($unusable) return '';
 
-        return SlideImage::DIR . \basename($name) . '-mobile.jpg';
+        $images = (string) $this->osmium->config->site->imagesPath;
+        $base = SlideImage::thumbBase($name, $kind);
+        $found = \str_starts_with($base, $images . '/') ? $this->osmium->imagePath(\substr($base, \strlen($images))) : '';
+
+        return $found !== '' ? $found : SlideImage::thumbUrl($name);
     }
 
     private function logChange(string $action, int $id, string $name): void

@@ -8,12 +8,60 @@ use Osmium\Core\Library\ImageTools;
 
 /**
  * A slide's picture on disk: the desktop size, a half-size mobile copy, each as JPG plus WebP and AVIF where this
- * server's GD can write them. Files are named <name>.jpg, <name>-mobile.jpg, webp/<name>.webp and avif/<name>.avif.
+ * server's GD can write them. A picture's name is <folder>/<file>, the folder from the slide's title and the file from the
+ * uploaded file's name, as the Blog does; older pictures have a bare name with no folder. Files are named <name>.jpg,
+ * <name>-mobile.jpg, <name>-list.jpg and <name>-grid.jpg (small copies for the admin lists), and webp/ and avif/ copies
+ * beside them inside the folder.
  */
 class SlideImage
 {
     public const DIR = '/assets/images/carousel/';
     public const TYPES = ['image/jpeg', 'image/png', 'image/webp'];
+    /** Name suffix => longest side in pixels: the admin list shows a small box, the grid view about 250px wide */
+    public const THUMBS = ['list' => 136, 'grid' => 240];
+    private const QUALITY = ['jpg' => 75, 'webp' => 80, 'avif' => 60];
+    private const THUMB_QUALITY = ['jpg' => 75, 'webp' => 70, 'avif' => 50];
+    private const SUFFIXES = ['', '-mobile', '-list', '-grid'];
+
+    /**
+     * The name for a new picture: the slide title's folder and the uploaded file's own name, with -2, -3 added only when taken
+     */
+    public static function name(string $title, string $originalName, string $root): string
+    {
+        $folder = self::slug($title);
+        $prefix = $folder === '' ? '' : $folder . '/';
+        $base = self::slug(\pathinfo($originalName, \PATHINFO_FILENAME)) ?: 'image';
+        $dir = $root . self::DIR . $prefix;
+
+        $name = $base;
+        for ($number = 2; self::taken($dir, $name); $number++) {
+            $name = $base . '-' . $number;
+        }
+
+        return $prefix . $name;
+    }
+
+    /** Whether any copy of a picture called this already exists in the folder */
+    private static function taken(string $dir, string $name): bool
+    {
+        foreach (self::SUFFIXES as $suffix) {
+            if (\is_file($dir . $name . $suffix . '.jpg')) return true;
+        }
+
+        return false;
+    }
+
+    /** A picture's list or grid thumbnail with no extension, for core's Image to pick the best copy of */
+    public static function thumbBase(string $name, string $kind): string
+    {
+        return self::DIR . $name . '-' . $kind;
+    }
+
+    /** Whether a stored name has the shape this class writes, so a stored value can never point outside the carousel folder */
+    public static function isValidName(?string $name): bool
+    {
+        return $name !== null && \preg_match('#^([a-z0-9-]+/)?[a-z0-9-]+$#', $name) === 1;
+    }
 
     /**
      * Crops from the centre to the target shape and scales to the target size, then writes every copy
@@ -36,29 +84,45 @@ class SlideImage
         $desktop = $tools->cover(image: $source, width: $width, height: $height, keepAlpha: false);
         $mobile = $tools->cover(image: $desktop, width: \intdiv($width, 2), height: \intdiv($height, 2), keepAlpha: false);
 
-        $dir = $root . self::DIR;
-        self::makeDirs($dir);
-        self::writeFormats(image: $desktop, dir: $dir, name: $name);
-        self::writeFormats(image: $mobile, dir: $dir, name: $name . '-mobile');
+        $dir = $root . self::DIR . self::folder($name);
+        $base = \basename($name);
+        $tools->storeVariants($desktop, $dir, $base, self::QUALITY);
+        $tools->storeVariants($mobile, $dir, $base . '-mobile', self::QUALITY);
+        foreach (self::THUMBS as $kind => $side) {
+            $tools->storeVariants($tools->fit($desktop, $side), $dir, $base . '-' . $kind, self::THUMB_QUALITY);
+        }
 
         return ['width' => $width, 'height' => $height];
     }
 
-    /** Deletes every copy of a picture */
+    /** Deletes every copy of a picture, then its folder when that leaves it empty */
     public static function remove(?string $name, string $root): void
     {
-        $hasName = !empty($name);
-        if (!$hasName) return;
+        $unusable = !self::isValidName($name);
+        if ($unusable) return;
 
-        $dir = $root . self::DIR;
+        $dir = $root . self::DIR . self::folder($name);
         $safe = \basename($name);
-        foreach (['', '-mobile'] as $suffix) {
+        foreach (self::SUFFIXES as $suffix) {
             foreach (['' => 'jpg', 'webp/' => 'webp', 'avif/' => 'avif'] as $sub => $extension) {
                 $path = $dir . $sub . $safe . $suffix . '.' . $extension;
                 $exists = \file_exists($path);
                 if ($exists) \unlink($path);
             }
         }
+
+        $hasFolder = $dir !== $root . self::DIR;
+        if ($hasFolder) {
+            foreach (['webp/', 'avif/', ''] as $sub) @\rmdir($dir . $sub); // Only succeeds on an empty folder
+        }
+    }
+
+    /** The URL of a picture's mobile JPG, which the admin shows as its thumbnail */
+    public static function thumbUrl(?string $name): string
+    {
+        $unusable = !self::isValidName($name);
+
+        return $unusable ? '' : self::DIR . $name . '-mobile.jpg';
     }
 
     /**
@@ -68,28 +132,25 @@ class SlideImage
      */
     public static function urls(string $name, string $suffix, string $root): array
     {
-        $dir = $root . self::DIR;
-        $base = $name . $suffix;
-        $webp = \file_exists($dir . 'webp/' . $base . '.webp') ? self::DIR . 'webp/' . $base . '.webp' : null;
-        $avif = \file_exists($dir . 'avif/' . $base . '.avif') ? self::DIR . 'avif/' . $base . '.avif' : null;
+        $folder = self::folder($name);
+        $dir = $root . self::DIR . $folder;
+        $base = \basename($name) . $suffix;
+        $webp = \file_exists($dir . 'webp/' . $base . '.webp') ? self::DIR . $folder . 'webp/' . $base . '.webp' : null;
+        $avif = \file_exists($dir . 'avif/' . $base . '.avif') ? self::DIR . $folder . 'avif/' . $base . '.avif' : null;
 
-        return ['jpg' => self::DIR . $base . '.jpg', 'webp' => $webp, 'avif' => $avif];
+        return ['jpg' => self::DIR . $folder . $base . '.jpg', 'webp' => $webp, 'avif' => $avif];
     }
 
-    private static function makeDirs(string $dir): void
+    /** A name's folder with its trailing slash, or '' for an older picture with none */
+    private static function folder(string $name): string
     {
-        foreach ([$dir, $dir . 'webp/', $dir . 'avif/'] as $path) {
-            $missing = !\is_dir($path);
-            if ($missing) \mkdir(directory: $path, permissions: 0755, recursive: true);
-        }
+        $slash = \strrpos($name, '/');
+
+        return $slash === false ? '' : \substr($name, 0, $slash + 1);
     }
 
-    private static function writeFormats(\GdImage $image, string $dir, string $name): void
+    private static function slug(string $text): string
     {
-        $written = \imagejpeg(image: $image, file: $dir . $name . '.jpg', quality: 75);
-        if (!$written) throw new \RuntimeException('Failed to save the image');
-
-        if (\function_exists('imagewebp')) \imagewebp(image: $image, file: $dir . 'webp/' . $name . '.webp', quality: 80);
-        if (\function_exists('imageavif')) \imageavif(image: $image, file: $dir . 'avif/' . $name . '.avif', quality: 60);
+        return \substr(\trim((string) \preg_replace('/[^a-z0-9]+/', '-', \strtolower($text)), '-'), 0, 60);
     }
 }

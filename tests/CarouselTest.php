@@ -7,6 +7,7 @@ namespace Tests\Services\OsmiumCarousel;
 use Osmium\Services\OsmiumCarousel\Models\Carousel;
 use Osmium\Services\OsmiumCarousel\Models\CarouselConfig;
 use Osmium\Services\OsmiumCarousel\Models\Slide;
+use Osmium\Services\OsmiumCarousel\Models\SlideImage;
 use Osmium\Services\OsmiumCarousel\Models\SlideSchedule;
 use Osmium\Services\OsmiumCarousel\Models\SlideText;
 use Tests\Integration\DatabaseTestCase;
@@ -26,6 +27,36 @@ require_once __DIR__ . '/../models/Carousel.php';
 class CarouselTest extends DatabaseTestCase
 {
     private const NO_SCHEDULE = ['scheduleStart' => null, 'scheduleEnd' => null, 'recurring' => false, 'exclusive' => false];
+
+    public function test_a_picture_is_named_from_the_title_folder_and_the_uploaded_file_and_a_clash_gets_a_number(): void
+    {
+        $root = \sys_get_temp_dir() . '/carousel-name-' . \uniqid();
+        \mkdir($root . SlideImage::DIR . 'summer-sale', 0755, true);
+
+        $this->assertSame('summer-sale/beach-hero', SlideImage::name(title: 'Summer Sale!', originalName: 'Beach Hero.JPG', root: $root));
+        $this->assertSame('image', SlideImage::name(title: '', originalName: '???', root: $root));
+
+        \touch($root . SlideImage::DIR . 'summer-sale/beach-hero.jpg');
+        $this->assertSame('summer-sale/beach-hero-2', SlideImage::name(title: 'Summer Sale', originalName: 'beach-hero.png', root: $root));
+
+        \unlink($root . SlideImage::DIR . 'summer-sale/beach-hero.jpg');
+        \rmdir($root . SlideImage::DIR . 'summer-sale');
+        \rmdir($root . SlideImage::DIR);
+        \rmdir($root . '/assets/images');
+        \rmdir($root . '/assets');
+        \rmdir($root);
+    }
+
+    public function test_a_stored_name_must_be_a_folder_and_file_or_an_older_bare_name(): void
+    {
+        $this->assertTrue(SlideImage::isValidName('summer-sale/beach-hero'));
+        $this->assertTrue(SlideImage::isValidName('3fa85f6457174562'));
+        $this->assertFalse(SlideImage::isValidName('../../etc/passwd'));
+        $this->assertFalse(SlideImage::isValidName('a/b/c'));
+        $this->assertFalse(SlideImage::isValidName(null));
+        $this->assertSame('/assets/images/carousel/summer-sale/beach-hero-mobile.jpg', SlideImage::thumbUrl('summer-sale/beach-hero'));
+        $this->assertSame('', SlideImage::thumbUrl('../x'));
+    }
 
     public function test_a_slide_without_dates_is_always_live(): void
     {

@@ -23,7 +23,7 @@ return [
         'order' => null, // Server order: display order, then oldest first
         'grid' => require __DIR__ . '/../grids/carousel.php',
         'columns' => [
-            ['key' => 'thumbUrl', 'label' => '', 'type' => 'image', 'altKey' => 'title', 'sortable' => false, 'hideBelow' => 'md'],
+            ['key' => 'thumb_list', 'label' => '', 'type' => 'image', 'altKey' => 'title', 'sortable' => false, 'hideBelow' => 'md'],
             ['key' => 'title', 'label' => 'Title', 'type' => 'text', 'strong' => true, 'fill' => true],
             ['key' => 'groupName', 'label' => 'Group', 'type' => 'text', 'nowrap' => true, 'hideBelow' => 'md'],
             ['key' => 'statusBadge', 'label' => 'Status', 'type' => 'raw', 'nowrap' => true],

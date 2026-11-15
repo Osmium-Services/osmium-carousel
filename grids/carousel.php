@@ -10,7 +10,7 @@ declare(strict_types=1);
 return [
     'columns' => 3,
     'imageHeight' => 120,
-    'image' => ['key' => 'thumbUrl', 'type' => 'image', 'altKey' => 'title'],
+    'image' => ['key' => 'thumb_grid', 'type' => 'image', 'altKey' => 'title'],
     'title' => ['key' => 'title', 'type' => 'text', 'strong' => true],
     'meta' => [
         ['key' => 'statusBadge', 'type' => 'raw'],
