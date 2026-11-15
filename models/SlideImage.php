@@ -119,11 +119,12 @@ class SlideImage
      * the new folder does not exist yet. Otherwise the picture's own copies are moved into the new folder one by one, keeping
      * the file's name (a number is added only if the new folder already has one of that name), and the old folder goes if
      * that leaves it empty. A picture saved before folders existed is moved into its folder the same way. A title that
-     * makes the same folder, or no folder at all, leaves the picture where it is.
+     * makes the same folder, or no folder at all, leaves the picture where it is. When other slides share the picture's
+     * files the copies are copied, not moved, so those slides keep theirs.
      *
      * @return string The picture's name afterwards, which is the same name when nothing moved
      */
-    public static function move(?string $name, string $title, string $root, bool $aloneInFolder): string
+    public static function move(?string $name, string $title, string $root, bool $aloneInFolder, bool $shared = false): string
     {
         $unusable = !self::isValidName($name);
         if ($unusable) return (string) $name;
@@ -138,13 +139,13 @@ class SlideImage
         $noPicture = !\is_file($from . \basename($name) . '.jpg'); // Nothing on disk to follow, so the record is left alone
         if ($noPicture) return $name;
 
-        $canRenameFolder = $oldFolder !== '' && $aloneInFolder && !\file_exists($to);
+        $canRenameFolder = !$shared && $oldFolder !== '' && $aloneInFolder && !\file_exists($to);
         if ($canRenameFolder && \rename($from, $to)) return $newFolder . '/' . \basename($name);
 
-        return self::moveCopies(name: $name, title: $title, root: $root);
+        return self::moveCopies(name: $name, title: $title, root: $root, keepOriginals: $shared);
     }
 
-    private static function moveCopies(string $name, string $title, string $root): string
+    private static function moveCopies(string $name, string $title, string $root, bool $keepOriginals): string
     {
         $newName = self::name(title: $title, originalName: \basename($name), root: $root);
         $from = $root . self::DIR . self::folder($name);
@@ -158,11 +159,12 @@ class SlideImage
                 $folder = $to . $sub;
                 $missing = !\is_dir($folder);
                 if ($missing) \mkdir(directory: $folder, permissions: 0755, recursive: true);
-                \rename($source, $folder . \basename($newName) . $suffix . '.' . $extension);
+                $target = $folder . \basename($newName) . $suffix . '.' . $extension;
+                $keepOriginals ? \copy($source, $target) : \rename($source, $target);
             }
         }
 
-        self::removeEmptyFolder(dir: $from, root: $root);
+        if (!$keepOriginals) self::removeEmptyFolder(dir: $from, root: $root);
 
         return $newName;
     }

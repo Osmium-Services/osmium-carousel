@@ -69,6 +69,20 @@ class Slide extends Model
     }
 
     /**
+     * How many other slides keep their picture under the same name, which an import from an older site can leave: those
+     * slides share one set of files. $liveOnly ignores binned slides, for clearing the bin.
+     */
+    public function othersSharingPicture(int $id, string $name, bool $liveOnly = false): int
+    {
+        $this->database->query($this->loadSqlFile('slide-count-sharing-picture.sql'));
+        $this->database->bind(param: ':id', value: $id);
+        $this->database->bind(param: ':name', value: $name);
+        $this->database->bind(param: ':live_only', value: $liveOnly ? 1 : 0);
+
+        return (int) ($this->database->single()['total'] ?? 0);
+    }
+
+    /**
      * @param array{title: string, groupName: ?string, summary: ?string, buttonText: ?string, linkType: string, linkPageId: ?int, linkUrl: ?string, enabled: bool, sortOrder: int, scheduleStart: ?string, scheduleEnd: ?string, recurring: bool, exclusive: bool, notes: ?string} $details
      */
     public function create(array $details): int

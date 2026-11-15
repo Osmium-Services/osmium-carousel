@@ -143,6 +143,29 @@ class CarouselTest extends DatabaseTestCase
         \rmdir($root);
     }
 
+    public function test_slides_sharing_a_picture_keep_their_files_when_one_of_them_follows_its_title(): void
+    {
+        $root = \sys_get_temp_dir() . '/carousel-shared-' . \uniqid();
+        $dir = $root . SlideImage::DIR;
+        \mkdir($dir, 0755, true);
+        \touch($dir . 'shared-pic.jpg');
+        \touch($dir . 'shared-pic-mobile.jpg');
+
+        $moved = SlideImage::move(name: 'shared-pic', title: 'Christmas', root: $root, aloneInFolder: false, shared: true);
+
+        $this->assertSame('christmas/shared-pic', $moved);
+        $this->assertFileExists($dir . 'christmas/shared-pic.jpg');
+        $this->assertFileExists($dir . 'shared-pic.jpg');
+        $this->assertFileExists($dir . 'shared-pic-mobile.jpg');
+
+        foreach (['shared-pic.jpg', 'shared-pic-mobile.jpg', 'christmas/shared-pic.jpg', 'christmas/shared-pic-mobile.jpg'] as $file) \unlink($dir . $file);
+        \rmdir($dir . 'christmas');
+        \rmdir($dir);
+        \rmdir($root . '/assets/images');
+        \rmdir($root . '/assets');
+        \rmdir($root);
+    }
+
     public function test_a_slide_without_dates_is_always_live(): void
     {
         $this->assertTrue(SlideSchedule::isLive(start: null, end: null, recurring: false, today: '2026-06-15'));

@@ -119,7 +119,7 @@ class CarouselController extends AdminController
 
         if ($saved !== null) {
             $model->setImage(id: $id, imageFilename: $saved['name'], width: $saved['width'], height: $saved['height']);
-            SlideImage::remove(name: $existing['image_filename'], root: $this->root());
+            $this->removePictureUnlessShared(slide: $existing, model: $model);
         }
 
         $keepsPicture = $saved === null && !empty($existing['image_filename']);
@@ -140,6 +140,7 @@ class CarouselController extends AdminController
             title: $title,
             root: $this->root(),
             aloneInFolder: $hasFolder && $model->othersInFolder(id: (int) $slide['id'], folder: $folder) === 0,
+            shared: $model->othersSharingPicture(id: (int) $slide['id'], name: (string) $slide['image_filename']) > 0,
         );
         SlideImage::ensureThumbs(name: $moved, root: $this->root());
 
@@ -147,6 +148,16 @@ class CarouselController extends AdminController
         if ($unchanged) return;
 
         $model->setImage(id: (int) $slide['id'], imageFilename: $moved, width: (int) $slide['image_width'], height: (int) $slide['image_height']);
+    }
+
+    /** Deletes a slide's picture files, unless another slide still uses the same ones (a bin being cleared only counts live slides) */
+    private function removePictureUnlessShared(array $slide, Slide $model, bool $liveOnly = false): void
+    {
+        $name = (string) ($slide['image_filename'] ?? '');
+        $shared = $name !== '' && $model->othersSharingPicture(id: (int) $slide['id'], name: $name, liveOnly: $liveOnly) > 0;
+        if ($shared) return;
+
+        SlideImage::remove(name: $name, root: $this->root());
     }
 
     private function setEnabled(int $id, bool $enabled): array
@@ -195,7 +206,7 @@ class CarouselController extends AdminController
         if (!$slide) throw new \InvalidArgumentException('Slide not found');
 
         $this->logChange(action: 'Permanently deleted', id: $id, name: $slide['title']);
-        SlideImage::remove(name: $slide['image_filename'], root: $this->root());
+        $this->removePictureUnlessShared(slide: $slide, model: $model);
         $model->hardDelete($id);
 
         return ['success' => true, 'id' => $id];
@@ -208,7 +219,7 @@ class CarouselController extends AdminController
 
         $model = new Slide($this->osmium->dataSource);
         foreach ($model->listDeleted() as $slide) {
-            SlideImage::remove(name: $slide['image_filename'], root: $this->root());
+            $this->removePictureUnlessShared(slide: $slide, model: $model, liveOnly: true);
         }
 
         $count = $model->purgeDeleted();
