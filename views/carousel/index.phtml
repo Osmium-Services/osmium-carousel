@@ -78,7 +78,18 @@ $listContext = [
 
                     <div class="mb-3">
                         <label class="form-label" for="slideImage">Picture <span id="slidePictureHint" class="text-muted"></span></label>
-                        <input type="file" class="form-control" id="slideImage" accept="image/jpeg,image/png,image/webp">
+                        <div class="slide-picture-zone" id="slidePictureZone">
+                            <button type="button" class="btn btn-sm btn-icon btn-danger slide-picture-remove d-none" title="Remove picture">
+                                <i class="bx bx-trash"></i>
+                            </button>
+                            <div class="slide-picture-empty">
+                                <i class="bx bx-cloud-upload"></i>
+                                <p class="mb-1 mt-2 fw-medium">Drag &amp; drop or click to upload</p>
+                                <small class="text-muted">JPG, PNG or WebP</small>
+                            </div>
+                            <img src="" alt="" class="slide-picture-preview d-none">
+                        </div>
+                        <input type="file" class="d-none" id="slideImage" accept="image/jpeg,image/png,image/webp">
                         <div class="form-text">At least <?= (int) $admin['size']['width'] ?> x <?= (int) $admin['size']['height'] ?>px. JPG, PNG or WebP.</div>
                     </div>
 
@@ -167,5 +178,6 @@ $listContext = [
         slides: <?= \json_encode(\array_column($admin['slides'], null, 'id'), JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT) ?>
     };
 </script>
+<link rel="stylesheet" href="/assets/services/osmium-carousel/carousel.css<?= $adminAssetVersion('/assets/services/osmium-carousel/carousel.css') ?>">
 <script src="/assets/admin/js/list-view.js<?= $adminAssetVersion('/assets/admin/js/list-view.js') ?>"></script>
 <script src="/assets/services/osmium-carousel/carousel.js<?= $adminAssetVersion('/assets/services/osmium-carousel/carousel.js') ?>"></script>

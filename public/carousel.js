@@ -28,6 +28,66 @@
         return response.json();
     }
 
+    // Picture drop zone: the chosen file stays in the hidden file input and is sent when the slide is saved
+    const zone = byId('slidePictureZone');
+    const pictureInput = byId('slideImage');
+    const preview = zone.querySelector('.slide-picture-preview');
+    const empty = zone.querySelector('.slide-picture-empty');
+    const removeButton = zone.querySelector('.slide-picture-remove');
+    let objectUrl = null;
+    let currentPicture = ''; // The slide's saved picture, which Remove falls back to: a slide always has one
+
+    function showPicture(src) {
+        if (objectUrl && src !== objectUrl) {
+            URL.revokeObjectURL(objectUrl);
+            objectUrl = null;
+        }
+        preview.classList.toggle('d-none', !src);
+        empty.classList.toggle('d-none', !!src);
+        removeButton.classList.toggle('d-none', !src);
+        if (src) preview.src = src;
+    }
+
+    function choosePicture(file) {
+        if (!file) return;
+        if (!/^image\/(jpeg|png|webp)$/.test(file.type)) {
+            show('slideResult', 'danger', 'Drop a JPG, PNG or WebP picture.');
+            return;
+        }
+
+        clear('slideResult');
+        const transfer = new DataTransfer();
+        transfer.items.add(file);
+        pictureInput.files = transfer.files;
+        objectUrl = URL.createObjectURL(file);
+        showPicture(objectUrl);
+    }
+
+    function initPictureZone() {
+        ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(function (name) {
+            zone.addEventListener(name, function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            });
+        });
+        ['dragenter', 'dragover'].forEach(function (name) {
+            zone.addEventListener(name, function () { zone.classList.add('drag-active'); });
+        });
+        ['dragleave', 'drop'].forEach(function (name) {
+            zone.addEventListener(name, function () { zone.classList.remove('drag-active'); });
+        });
+        zone.addEventListener('drop', function (e) { choosePicture(e.dataTransfer.files[0]); });
+        zone.addEventListener('click', function (e) {
+            if (!e.target.closest('.slide-picture-remove')) pictureInput.click();
+        });
+        pictureInput.addEventListener('change', function () { choosePicture(pictureInput.files[0]); });
+        removeButton.addEventListener('click', function (e) {
+            e.stopPropagation();
+            pictureInput.value = '';
+            showPicture(currentPicture);
+        });
+    }
+
     function showLinkFields() {
         const type = byId('slideLinkType').value;
         byId('slideLinkPageWrap').classList.toggle('d-none', type !== 'page');
@@ -43,9 +103,10 @@
         byId('slideTitle').value = isEdit ? slide.title : '';
         byId('slideGroup').value = isEdit ? slide.groupName : '';
         byId('slideSummary').value = isEdit ? slide.summary : '';
-        byId('slideImage').value = '';
-        byId('slideImage').required = !isEdit;
-        byId('slidePictureHint').textContent = isEdit ? '(leave empty to keep the current one)' : '';
+        pictureInput.value = '';
+        currentPicture = isEdit ? slide.thumbUrl : '';
+        showPicture(currentPicture);
+        byId('slidePictureHint').textContent = isEdit ? '(leave as is to keep the current one)' : '';
         byId('slideLinkType').value = isEdit ? slide.linkType : 'none';
         if (isEdit && slide.linkPageId !== '') byId('slideLinkPage').value = slide.linkPageId;
         byId('slideLinkUrl').value = isEdit ? slide.linkUrl : '';
@@ -133,6 +194,7 @@
     }
 
     function init() {
+        initPictureZone();
         byId('addSlideButton').addEventListener('click', function () {
             openModal(null);
         });
