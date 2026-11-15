@@ -130,16 +130,19 @@ class CarouselController extends AdminController
         return ['success' => true, 'id' => $id];
     }
 
-    /** A slide keeping its picture after a title change has its picture follow the new title's folder */
+    /** A slide keeping its picture has the picture follow the title's folder and gets any missing list and grid copies */
     private function followTitle(array $slide, string $title, Slide $model): void
     {
-        $folder = \dirname((string) $slide['image_filename']) . '/';
+        $hasFolder = \str_contains((string) $slide['image_filename'], '/');
+        $folder = $hasFolder ? \dirname((string) $slide['image_filename']) . '/' : '';
         $moved = SlideImage::move(
             name: $slide['image_filename'],
             title: $title,
             root: $this->root(),
-            aloneInFolder: $model->othersInFolder(id: (int) $slide['id'], folder: $folder) === 0,
+            aloneInFolder: $hasFolder && $model->othersInFolder(id: (int) $slide['id'], folder: $folder) === 0,
         );
+        SlideImage::ensureThumbs(name: $moved, root: $this->root());
+
         $unchanged = $moved === $slide['image_filename'];
         if ($unchanged) return;
 

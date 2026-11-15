@@ -118,7 +118,8 @@ class SlideImage
      * Follows a slide's new title: the picture's folder is renamed in one step when the slide is the only one using it and
      * the new folder does not exist yet. Otherwise the picture's own copies are moved into the new folder one by one, keeping
      * the file's name (a number is added only if the new folder already has one of that name), and the old folder goes if
-     * that leaves it empty. A picture saved before folders existed, or a title that makes the same folder, stays put.
+     * that leaves it empty. A picture saved before folders existed is moved into its folder the same way. A title that
+     * makes the same folder, or no folder at all, leaves the picture where it is.
      *
      * @return string The picture's name afterwards, which is the same name when nothing moved
      */
@@ -129,12 +130,15 @@ class SlideImage
 
         $oldFolder = self::folder($name);
         $newFolder = self::slug($title);
-        $stays = $oldFolder === '' || $newFolder === '' || $oldFolder === $newFolder . '/';
+        $stays = $newFolder === '' || $oldFolder === $newFolder . '/';
         if ($stays) return $name;
 
         $from = $root . self::DIR . $oldFolder;
         $to = $root . self::DIR . $newFolder . '/';
-        $canRenameFolder = $aloneInFolder && !\file_exists($to);
+        $noPicture = !\is_file($from . \basename($name) . '.jpg'); // Nothing on disk to follow, so the record is left alone
+        if ($noPicture) return $name;
+
+        $canRenameFolder = $oldFolder !== '' && $aloneInFolder && !\file_exists($to);
         if ($canRenameFolder && \rename($from, $to)) return $newFolder . '/' . \basename($name);
 
         return self::moveCopies(name: $name, title: $title, root: $root);
@@ -161,6 +165,29 @@ class SlideImage
         self::removeEmptyFolder(dir: $from, root: $root);
 
         return $newName;
+    }
+
+    /**
+     * Makes the list and grid copies of a picture that lacks them, from its desktop JPG. A picture saved before these
+     * copies existed gets them the first time its slide is saved.
+     */
+    public static function ensureThumbs(?string $name, string $root): void
+    {
+        $unusable = !self::isValidName($name);
+        if ($unusable) return;
+
+        $dir = $root . self::DIR . self::folder($name);
+        $base = \basename($name);
+        $source = $dir . $base . '.jpg';
+        $tools = new ImageTools();
+        $image = null;
+        foreach (self::THUMBS as $kind => $side) {
+            $made = \is_file($dir . $base . '-' . $kind . '.jpg');
+            if ($made || !\is_file($source)) continue;
+
+            $image ??= $tools->load(path: $source, allowedTypes: ['image/jpeg']);
+            $tools->storeVariants($tools->fit($image, $side), $dir, $base . '-' . $kind, self::THUMB_QUALITY);
+        }
     }
 
     /** The URL of a picture's mobile JPG, which the admin shows as its thumbnail */

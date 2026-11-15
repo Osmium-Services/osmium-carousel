@@ -12,6 +12,7 @@ use Osmium\Services\OsmiumCarousel\Models\SlideSchedule;
 use Osmium\Services\OsmiumCarousel\Models\SlideText;
 use Tests\Integration\DatabaseTestCase;
 
+require_once __DIR__ . '/../../../core/library/ImageTools.php';
 require_once __DIR__ . '/../models/SlideSchedule.php';
 require_once __DIR__ . '/../models/SlideText.php';
 require_once __DIR__ . '/../models/CarouselConfig.php';
@@ -112,6 +113,31 @@ class CarouselTest extends DatabaseTestCase
 
         foreach (['taken/pic.jpg', 'taken/pic-2.jpg', 'taken/webp/pic-2.webp'] as $file) @\unlink($dir . $file);
         foreach (['taken/webp', 'taken', ''] as $folder) @\rmdir($dir . $folder);
+        \rmdir($root . '/assets/images');
+        \rmdir($root . '/assets');
+        \rmdir($root);
+    }
+
+    public function test_an_older_flat_picture_moves_into_its_folder_and_gets_its_list_and_grid_copies(): void
+    {
+        $root = \sys_get_temp_dir() . '/carousel-flat-' . \uniqid();
+        $dir = $root . SlideImage::DIR;
+        \mkdir($dir, 0755, true);
+        \imagejpeg(\imagecreatetruecolor(1920, 600), $dir . 'old-pic.jpg');
+        \imagejpeg(\imagecreatetruecolor(960, 300), $dir . 'old-pic-mobile.jpg');
+
+        $moved = SlideImage::move(name: 'old-pic', title: 'Spring Sale', root: $root, aloneInFolder: false);
+        SlideImage::ensureThumbs(name: $moved, root: $root);
+
+        $this->assertSame('spring-sale/old-pic', $moved);
+        $this->assertFileDoesNotExist($dir . 'old-pic.jpg');
+        $this->assertFileExists($dir . 'spring-sale/old-pic-mobile.jpg');
+        $this->assertSame(136, \getimagesize($dir . 'spring-sale/old-pic-list.jpg')[0]);
+        $this->assertSame(240, \getimagesize($dir . 'spring-sale/old-pic-grid.jpg')[0]);
+
+        SlideImage::remove(name: $moved, root: $root);
+        $this->assertDirectoryDoesNotExist($dir . 'spring-sale');
+        \rmdir($dir);
         \rmdir($root . '/assets/images');
         \rmdir($root . '/assets');
         \rmdir($root);
