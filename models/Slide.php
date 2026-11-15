@@ -58,6 +58,16 @@ class Slide extends Model
         return $this->one(file: 'slide-get-any.sql', id: $id);
     }
 
+    /** How many other slides, binned ones included, keep their pictures in a folder of /assets/images/carousel/ (the name has a trailing slash) */
+    public function othersInFolder(int $id, string $folder): int
+    {
+        $this->database->query($this->loadSqlFile('slide-count-in-folder.sql'));
+        $this->database->bind(param: ':id', value: $id);
+        $this->database->bind(param: ':pattern', value: $folder . '%');
+
+        return (int) ($this->database->single()['total'] ?? 0);
+    }
+
     /**
      * @param array{title: string, groupName: ?string, summary: ?string, buttonText: ?string, linkType: string, linkPageId: ?int, linkUrl: ?string, enabled: bool, sortOrder: int, scheduleStart: ?string, scheduleEnd: ?string, recurring: bool, exclusive: bool, notes: ?string} $details
      */

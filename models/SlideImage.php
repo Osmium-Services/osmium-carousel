@@ -115,13 +115,14 @@ class SlideImage
     }
 
     /**
-     * Moves a picture's copies into the folder its slide's new title makes, keeping the file's name (a number is added
-     * only if the new folder already has one of that name). The old folder goes if that leaves it empty. A picture saved
-     * before folders existed, or a title that makes the same folder, stays where it is.
+     * Follows a slide's new title: the picture's folder is renamed in one step when the slide is the only one using it and
+     * the new folder does not exist yet. Otherwise the picture's own copies are moved into the new folder one by one, keeping
+     * the file's name (a number is added only if the new folder already has one of that name), and the old folder goes if
+     * that leaves it empty. A picture saved before folders existed, or a title that makes the same folder, stays put.
      *
      * @return string The picture's name afterwards, which is the same name when nothing moved
      */
-    public static function move(?string $name, string $title, string $root): string
+    public static function move(?string $name, string $title, string $root, bool $aloneInFolder): string
     {
         $unusable = !self::isValidName($name);
         if ($unusable) return (string) $name;
@@ -131,8 +132,18 @@ class SlideImage
         $stays = $oldFolder === '' || $newFolder === '' || $oldFolder === $newFolder . '/';
         if ($stays) return $name;
 
-        $newName = self::name(title: $title, originalName: \basename($name), root: $root);
         $from = $root . self::DIR . $oldFolder;
+        $to = $root . self::DIR . $newFolder . '/';
+        $canRenameFolder = $aloneInFolder && !\file_exists($to);
+        if ($canRenameFolder && \rename($from, $to)) return $newFolder . '/' . \basename($name);
+
+        return self::moveCopies(name: $name, title: $title, root: $root);
+    }
+
+    private static function moveCopies(string $name, string $title, string $root): string
+    {
+        $newName = self::name(title: $title, originalName: \basename($name), root: $root);
+        $from = $root . self::DIR . self::folder($name);
         $to = $root . self::DIR . self::folder($newName);
         foreach (self::SUFFIXES as $suffix) {
             foreach (['' => 'jpg', 'webp/' => 'webp', 'avif/' => 'avif'] as $sub => $extension) {
