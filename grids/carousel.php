@@ -8,7 +8,7 @@ declare(strict_types=1);
  * Cards follow the server's display order.
  */
 return [
-    'columns' => 4,
+    'columns' => 3,
     'imageHeight' => 120,
     'image' => ['key' => 'thumbUrl', 'type' => 'image', 'altKey' => 'title'],
     'title' => ['key' => 'title', 'type' => 'text', 'strong' => true],
