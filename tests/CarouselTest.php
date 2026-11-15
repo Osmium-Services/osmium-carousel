@@ -58,6 +58,38 @@ class CarouselTest extends DatabaseTestCase
         $this->assertSame('', SlideImage::thumbUrl('../x'));
     }
 
+    public function test_changing_the_title_moves_the_pictures_files_into_the_new_folder(): void
+    {
+        $root = \sys_get_temp_dir() . '/carousel-move-' . \uniqid();
+        $dir = $root . SlideImage::DIR;
+        \mkdir($dir . 'old-title/webp', 0755, true);
+        foreach (['beach-hero', 'beach-hero-mobile'] as $file) {
+            \touch($dir . 'old-title/' . $file . '.jpg');
+            \touch($dir . 'old-title/webp/' . $file . '.webp');
+        }
+        \touch($dir . 'old-title/other.jpg'); // Another slide's picture sharing the folder
+
+        $moved = SlideImage::move(name: 'old-title/beach-hero', title: 'New Title', root: $root);
+
+        $this->assertSame('new-title/beach-hero', $moved);
+        $this->assertFileExists($dir . 'new-title/beach-hero-mobile.jpg');
+        $this->assertFileExists($dir . 'new-title/webp/beach-hero.webp');
+        $this->assertFileDoesNotExist($dir . 'old-title/beach-hero.jpg');
+        $this->assertFileExists($dir . 'old-title/other.jpg');
+        $this->assertSame('old-title/other', SlideImage::move(name: 'old-title/other', title: 'Old Title', root: $root));
+
+        SlideImage::remove(name: 'new-title/beach-hero', root: $root);
+        $this->assertDirectoryDoesNotExist($dir . 'new-title');
+        $this->assertSame('3fa85f6457174562', SlideImage::move(name: '3fa85f6457174562', title: 'Anything', root: $root));
+
+        \unlink($dir . 'old-title/other.jpg');
+        \rmdir($dir . 'old-title');
+        \rmdir($dir);
+        \rmdir($root . '/assets/images');
+        \rmdir($root . '/assets');
+        \rmdir($root);
+    }
+
     public function test_a_slide_without_dates_is_always_live(): void
     {
         $this->assertTrue(SlideSchedule::isLive(start: null, end: null, recurring: false, today: '2026-06-15'));

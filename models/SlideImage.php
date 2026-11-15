@@ -111,10 +111,45 @@ class SlideImage
             }
         }
 
-        $hasFolder = $dir !== $root . self::DIR;
-        if ($hasFolder) {
-            foreach (['webp/', 'avif/', ''] as $sub) @\rmdir($dir . $sub); // Only succeeds on an empty folder
+        self::removeEmptyFolder(dir: $dir, root: $root);
+    }
+
+    /**
+     * Moves a picture's copies into the folder its slide's new title makes, keeping the file's name (a number is added
+     * only if the new folder already has one of that name). The old folder goes if that leaves it empty. A picture saved
+     * before folders existed, or a title that makes the same folder, stays where it is.
+     *
+     * @return string The picture's name afterwards, which is the same name when nothing moved
+     */
+    public static function move(?string $name, string $title, string $root): string
+    {
+        $unusable = !self::isValidName($name);
+        if ($unusable) return (string) $name;
+
+        $oldFolder = self::folder($name);
+        $newFolder = self::slug($title);
+        $stays = $oldFolder === '' || $newFolder === '' || $oldFolder === $newFolder . '/';
+        if ($stays) return $name;
+
+        $newName = self::name(title: $title, originalName: \basename($name), root: $root);
+        $from = $root . self::DIR . $oldFolder;
+        $to = $root . self::DIR . self::folder($newName);
+        foreach (self::SUFFIXES as $suffix) {
+            foreach (['' => 'jpg', 'webp/' => 'webp', 'avif/' => 'avif'] as $sub => $extension) {
+                $source = $from . $sub . \basename($name) . $suffix . '.' . $extension;
+                $exists = \file_exists($source);
+                if (!$exists) continue;
+
+                $folder = $to . $sub;
+                $missing = !\is_dir($folder);
+                if ($missing) \mkdir(directory: $folder, permissions: 0755, recursive: true);
+                \rename($source, $folder . \basename($newName) . $suffix . '.' . $extension);
+            }
         }
+
+        self::removeEmptyFolder(dir: $from, root: $root);
+
+        return $newName;
     }
 
     /** The URL of a picture's mobile JPG, which the admin shows as its thumbnail */
@@ -139,6 +174,14 @@ class SlideImage
         $avif = \file_exists($dir . 'avif/' . $base . '.avif') ? self::DIR . $folder . 'avif/' . $base . '.avif' : null;
 
         return ['jpg' => self::DIR . $folder . $base . '.jpg', 'webp' => $webp, 'avif' => $avif];
+    }
+
+    private static function removeEmptyFolder(string $dir, string $root): void
+    {
+        $hasFolder = $dir !== $root . self::DIR;
+        if ($hasFolder) {
+            foreach (['webp/', 'avif/', ''] as $sub) @\rmdir($dir . $sub); // Only succeeds on an empty folder
+        }
     }
 
     /** A name's folder with its trailing slash, or '' for an older picture with none */

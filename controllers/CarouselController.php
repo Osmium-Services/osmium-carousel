@@ -122,9 +122,22 @@ class CarouselController extends AdminController
             SlideImage::remove(name: $existing['image_filename'], root: $this->root());
         }
 
+        $keepsPicture = $saved === null && !empty($existing['image_filename']);
+        if ($keepsPicture) $this->followTitle(slide: $existing, title: $details['title'], model: $model);
+
         $this->logChange(action: 'Updated', id: $id, name: $details['title']);
 
         return ['success' => true, 'id' => $id];
+    }
+
+    /** A slide keeping its picture after a title change has the picture's files moved to the new title's folder */
+    private function followTitle(array $slide, string $title, Slide $model): void
+    {
+        $moved = SlideImage::move(name: $slide['image_filename'], title: $title, root: $this->root());
+        $unchanged = $moved === $slide['image_filename'];
+        if ($unchanged) return;
+
+        $model->setImage(id: (int) $slide['id'], imageFilename: $moved, width: (int) $slide['image_width'], height: (int) $slide['image_height']);
     }
 
     private function setEnabled(int $id, bool $enabled): array
