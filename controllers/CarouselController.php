@@ -34,6 +34,7 @@ class CarouselController extends AdminController
 
         $this->data['admin']['isAdmin'] = $this->isAdmin();
         $this->data['admin']['lists'] = require __DIR__ . '/../lists/carousel.php';
+        $this->data['admin']['activeEditors'] = $this->activeEditors(self::RECORD_TYPE);
         $this->data['admin']['slides'] = \array_map(fn(array $row): array => $this->formatSlide(row: $row, today: $today), $model->listAll());
         $this->data['admin']['recentSlides'] = \array_map($this->formatRecentSlide(...), $model->listRecent());
         $this->data['admin']['deletedSlides'] = \array_map($this->formatDeletedSlide(...), $model->listDeleted());
@@ -59,6 +60,7 @@ class CarouselController extends AdminController
         $row = $id ? $model->getById($id) : null;
         if (!$row) $this->redirect('carousel/');
 
+        $this->openRecord(recordType: self::RECORD_TYPE, recordId: $id);
         $this->prepareFormData(model: $model, slide: $this->formatSlide(row: $row, today: \date('Y-m-d')));
         $this->setView('carousel/edit.phtml');
     }
@@ -73,6 +75,8 @@ class CarouselController extends AdminController
         $input = $this->admin->auth->getJsonInput();
         $action = $input['action'] ?? '';
         $id = (int) ($input['id'] ?? 0);
+
+        $this->handlePresence(action: $action, input: $input, recordType: self::RECORD_TYPE);
 
         $csrfValid = $this->admin->auth->validateCsrfJson($input);
         if (!$csrfValid) $this->admin->jsonError('Invalid request token. Please refresh and try again.');

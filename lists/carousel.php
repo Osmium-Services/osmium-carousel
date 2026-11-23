@@ -18,6 +18,7 @@ return [
         'title' => 'Slides',
         'noun' => ['slide', 'slides'],
         'endpoint' => 'carousel/action/',
+        'presence' => 'carousel_slide',
         'note' => 'Slides a theme can show in a carousel, in display order. A group name lets a site run more than one carousel. Scheduled slides appear and disappear by themselves.',
         'emptyText' => 'No slides yet - use Add Slide to create one.',
         'order' => null, // Server order: display order, then oldest first

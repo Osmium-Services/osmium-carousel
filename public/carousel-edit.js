@@ -116,6 +116,21 @@
         return form;
     }
 
+    // The admin's unsaved-changes warning reads window.hasUnsavedChanges. Its form tracker compares named fields and
+    // this form has none, so compare what Save would send against what the page loaded with.
+    function formValues() {
+        const values = {};
+        for (const [key, value] of buildSlideForm().entries()) {
+            if (key === 'csrf_token') continue;
+            values[key] = value instanceof File ? value.name + ':' + value.size : value;
+        }
+        return JSON.stringify(values);
+    }
+
+    function trackChanges() {
+        window.hasUnsavedChanges = formValues() !== loadedValues;
+    }
+
     async function handleSubmit(e) {
         e.preventDefault();
         clear();
@@ -128,6 +143,7 @@
             const result = await response.json();
             if (result.success) {
                 // Go to the slide by id: the page shows the same saved bar as every other edit screen
+                window.hasUnsavedChanges = false;
                 window.location.href = config.editUrl + '?id=' + result.id;
                 return;
             }
@@ -141,6 +157,10 @@
 
     initPictureZone();
     showLinkFields();
+    const loadedValues = formValues();
+    byId('slideForm').addEventListener('input', trackChanges);
+    byId('slideForm').addEventListener('change', trackChanges);
+    removeButton.addEventListener('click', trackChanges);
     byId('slideLinkType').addEventListener('change', showLinkFields);
     byId('slideForm').addEventListener('submit', handleSubmit);
 })();

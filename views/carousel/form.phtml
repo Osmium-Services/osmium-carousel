@@ -144,5 +144,8 @@
         currentPicture: <?= \json_encode($slide['thumbUrl']) ?>
     };
 </script>
+<script nonce="<?= $cspNonce ?? '' ?>">
+    initPresenceTracking(adminBasePath + 'carousel/action/', <?= (int) $slide['id'] ?>, { formSelector: '#slideForm' });
+</script>
 <link rel="stylesheet" href="/assets/services/osmium-carousel/carousel.css<?= $adminAssetVersion('/assets/services/osmium-carousel/carousel.css') ?>">
 <script src="/assets/services/osmium-carousel/carousel-edit.js<?= $adminAssetVersion('/assets/services/osmium-carousel/carousel-edit.js') ?>"></script>
