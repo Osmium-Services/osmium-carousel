@@ -1,6 +1,7 @@
 ---
 title: Add and schedule homepage slides
 tags: carousel, slides, slider, banner, homepage, schedule, image, exclusive, group
+page: admin/carousel, admin/carousel/add, admin/carousel/edit*
 ---
 
 **Osmium Carousel** manages the slides your site's design shows, usually on the homepage.
